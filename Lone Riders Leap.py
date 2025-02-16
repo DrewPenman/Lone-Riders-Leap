@@ -1,9 +1,6 @@
 #-------------------------------------------------------------------------------
 # Name:        Lone Rider's Leap
-# Purpose:
-#
-# Author:
-#
+
 # Created:     05/01/2024
 # Copyright:   Creative Common BY-NC-SA 3.0 Licence 2024
 #-------------------------------------------------------------------------------
@@ -13,7 +10,7 @@
 import pygame
 import random
 
-#storing the position of platforms and collectables
+#Storing the intial platform positions
 platformXPos = [0, 150, 250, 350, 450, 550, 650, 750, 850, 950]
 platformYPos = [250, 240, 240, 260, 230, 230, 250, 250, 260, 250, 250, 235, 240, 245, 260, 260, 255, 235, 245, 250]
 coinXpos = [665,165,455]
@@ -21,7 +18,7 @@ coinYpos = [235,215,240]
 tumbleweedxPos = [950,260,600,400]
 tumbleweedyPos = [220,240,240,150]
 
-# Define Classes (sprites) here
+# Define objects (sprites) here
 class platform(pygame.sprite.Sprite):
     def __init__(self):
         pygame.sprite.Sprite.__init__(self)
@@ -201,11 +198,11 @@ charactersGroup.add(character)
 #Creating coin collectable and pasing in the coordinates
 coin = collectable(coinXpos[0],230)
 
-#creatng and adding coin to group
+#Creating and adding coins to group for collectables
 collectables = pygame.sprite.Group()
 collectables.add(coin)
 
-#creating enemy group
+#Creating enemy group
 tumbleweed = Tumbleweed("enemies/Tumbleweed.png")
 enemies = pygame.sprite.Group()
 enemies.add(tumbleweed)
@@ -218,7 +215,7 @@ state = ""
 collected = 0
 level = "start"
 if level == "start":
-    #Addng in each of the level 1 desert plaforms
+    #Adding in each of the level 1 desert plaforms by iterating through each elments within the group
     for index in range(0,10):
         nextObject = platform()
         nextObject.type("platforms/desert_platform.png")
