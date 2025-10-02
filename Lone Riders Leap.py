@@ -10,6 +10,19 @@
 import pygame
 import random
 
+# Constants
+SCREEN_WIDTH = 1000
+SCREEN_HEIGHT = 500
+CHARACTER_START_X = 0
+CHARACTER_START_Y = 210
+CHARACTER_DEATH_Y = 425
+MAX_X_POSITION = 950
+MOVEMENT_SPEED = 5
+JUMP_SPEED = 6
+MAX_GRAVITY = 13
+GRAVITY_INCREMENT = 0.5
+FPS = 20
+
 #Storing the intial platform positions
 platformXPos = [0, 150, 250, 350, 450, 550, 650, 750, 850, 950]
 platformYPos = [250, 240, 240, 260, 230, 230, 250, 250, 260, 250, 250, 235, 240, 245, 260, 260, 255, 235, 245, 250]
@@ -71,10 +84,10 @@ class collectable(pygame.sprite.Sprite):
         self.image.blit(pygame.image.load("collectables/coin.png"),(0,0))
 
     def movement(self):
-        self.rect.y = self.rect.y - 1
+        self.rect.y -= 1
 
-        if self.rect.y <= self.y - 5 :
-            self.rect.y = self.rect.y + 5
+        if self.rect.y <= self.y - 5:
+            self.rect.y += 5
 
 
 class Tumbleweed(pygame.sprite.Sprite):
@@ -86,24 +99,29 @@ class Tumbleweed(pygame.sprite.Sprite):
        self.rect.x = 950
        self.rect.y = 230
        self.image.blit(pygame.image.load(image),(0,0))
+       
+       # Set speed based on enemy type
        if image == "enemies/Tumbleweed.png":
-        self.speed = 3
-       if image == "enemies/bat.png":
-        self.speed = 2
+           self.speed = 3
+       elif image == "enemies/bat.png":
+           self.speed = 2
+       
+       # Track direction as instance variable
+       self.direction = "left"
 
 
-    def movement(self,direction):
+    def movement(self):
+        # Reverse direction at boundaries
         if self.rect.x <= 45:
-            direction = "right"
-        if self.rect.x >= 945:
-            direction = "left"
+            self.direction = "right"
+        elif self.rect.x >= 945:
+            self.direction = "left"
 
-        if direction == "left":
-            self.rect.x = self.rect.x - self.speed
-        elif direction == "right":
-            self.rect.x = self.rect.x + self.speed
-
-        return direction
+        # Move in current direction
+        if self.direction == "left":
+            self.rect.x -= self.speed
+        else:
+            self.rect.x += self.speed
 
     def position(self,x,y):
         self.rect.x = x
@@ -128,49 +146,51 @@ class Character(pygame.sprite.Sprite):
         self.image.set_colorkey(black)
 
         self.rect = self.image.get_rect()
-        self.rect.x = 0
+        self.rect.x = CHARACTER_START_X
         self.rect.y = 207
 
         self.rect.width = 36
         self.rect.height = 42
-        self.image.blit(pygame.image.load("character/character-right.png"),(0,0))
+        
+        # Cache images to avoid repeated loading
+        self.image_right = pygame.image.load("character/character-right.png")
+        self.image_left = pygame.image.load("character/character-left.png")
+        self.image.blit(self.image_right,(0,0))
 
      def imgDirection(self,direction):
         if direction == "left":
-            self.image.blit(pygame.image.load("character/character-left.png"),(0,0))
+            self.image.blit(self.image_left,(0,0))
         elif direction == "right":
-            self.image.blit(pygame.image.load("character/character-right.png"),(0,0))
+            self.image.blit(self.image_right,(0,0))
 
 
      def moveCharacter(self,movement,vertMovement):
-        if self.rect.x >= 0 and self.rect.x <= 950:
-            self.rect.x = self.rect.x + movement
-        if self.rect.x< 0:
-            self.rect.x = 0
-        if self.rect.x >= 950:
-            self.rect.x = 950
+        # Update position with bounds checking
+        self.rect.x += movement
+        self.rect.x = max(0, min(self.rect.x, MAX_X_POSITION))
+        
         if vertMovement > 0:
-            self.rect.y = self.rect.y - vertMovement
+            self.rect.y -= vertMovement
 
      def startingPos(self):
-         self.rect.y = 210
-         self.rect.x = 0
-         self.image.blit(pygame.image.load("character/character-right.png"),(0,0))
+         self.rect.y = CHARACTER_START_Y
+         self.rect.x = CHARACTER_START_X
+         self.image.blit(self.image_right,(0,0))
 
      def gravity(self,rate,lives):
-        self.rect.y = self.rect.y + rate
-        if self.rect.y >= 425:
+        self.rect.y += rate
+        if self.rect.y >= CHARACTER_DEATH_Y:
             deathsound.play()
-            self.rect.y = 210
-            self.rect.x = 0
-            self.image.blit(pygame.image.load("character/character-right.png"),(0,0))
-            lives = lives - 1
+            self.rect.y = CHARACTER_START_Y
+            self.rect.x = CHARACTER_START_X
+            self.image.blit(self.image_right,(0,0))
+            lives -= 1
         return lives
 
 
 pygame.init()                               # Pygame is initialised (starts running)
 pygame.mixer.init()
-screen = pygame.display.set_mode([1000,500]) # Set the width and height of the screen [width,height]
+screen = pygame.display.set_mode([SCREEN_WIDTH,SCREEN_HEIGHT]) # Set the width and height of the screen [width,height]
 pygame.display.set_caption("Lone Rider's Leap")  # Name your window
 background_image = pygame.image.load("backgrounds/DesertBackground.jpg").convert() # sets level 1 background to the desert.jpg
 done = False
@@ -268,7 +288,6 @@ increment = 0
 gravity = 0
 level = "1"
 direction = "left"
-direction_enemy = ""
 
 # -------- Main Program Loop (Game Window - Levels) -----------
 while done == False and state == "level 1":
@@ -278,24 +297,20 @@ while done == False and state == "level 1":
             pygame.quit()
             quit()
 
-        #Detecting key preses for movement of the character
+        #Detecting key presses for movement of the character
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_LEFT:
-                movement = -5
+                movement = -MOVEMENT_SPEED
                 direction = "left"
                 character.imgDirection(direction)
                 walkingsound.play()
-
-        if event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_RIGHT:
-                movement = 5
+            elif event.key == pygame.K_RIGHT:
+                movement = MOVEMENT_SPEED
                 direction = "right"
                 character.imgDirection(direction)
                 walkingsound.play()
-
-        if event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_UP:
-                vertMovement = 6
+            elif event.key == pygame.K_UP:
+                vertMovement = JUMP_SPEED
                 jumpingsound.play()
 
         if event.type == pygame.KEYUP:
@@ -308,32 +323,32 @@ while done == False and state == "level 1":
         coins.movement()
 
     for enemy in enemies:
-        direction_enemy = enemy.movement(direction_enemy)
+        enemy.movement()
 
     #Detecting the collision between platforms and the character
-    collisions = pygame.sprite.groupcollide(platforms,charactersGroup,False,False)
+    platform_collisions = pygame.sprite.groupcollide(platforms,charactersGroup,False,False)
 
     #Activating gravity
-    if len(collisions) < 1:
-        if gravity < 13:
-            gravity += 0.5
+    if len(platform_collisions) < 1:
+        if gravity < MAX_GRAVITY:
+            gravity += GRAVITY_INCREMENT
         lives = character.gravity(gravity,lives)
 
     #Disabling gravity on platform
-    if len(collisions) > 0:
+    if len(platform_collisions) > 0:
         gravity = 0
         lives = character.gravity(gravity,lives)
 
     #Detecting the colllision of character and collectables
-    collisions = pygame.sprite.groupcollide(charactersGroup,collectables,False,True)
-    if len(collisions) > 0 :
+    collectable_collisions = pygame.sprite.groupcollide(charactersGroup,collectables,False,True)
+    if len(collectable_collisions) > 0 :
         item_collection.play()
         collected += 1
         lives = lives + 1
 
     #Detecting the collision between the character and platform
-    collisions = pygame.sprite.groupcollide(charactersGroup,endPlatform,False,False)
-    if len(collisions) > 0:
+    end_platform_collisions = pygame.sprite.groupcollide(charactersGroup,endPlatform,False,False)
+    if len(end_platform_collisions) > 0:
         if level == "1" and collected == 1:
             level = 2
         elif level == "2current":
@@ -341,8 +356,8 @@ while done == False and state == "level 1":
         elif level == "3current":
             level = "complete"
 
-    collisions = pygame.sprite.groupcollide(enemies,charactersGroup,False,False)
-    if len(collisions) > 0:
+    enemy_collisions = pygame.sprite.groupcollide(enemies,charactersGroup,False,False)
+    if len(enemy_collisions) > 0:
         deathsound.play()
         character.startingPos()
         lives = lives - 1
@@ -455,4 +470,4 @@ while done == False and state == "level 1":
     collectables.draw(screen)
     enemies.draw(screen)
     pygame.display.flip()                   # updates the screen with what's been drawn
-    clock.tick(20)                          # Limit to 20 frames per second
+    clock.tick(FPS)                          # Limit to 20 frames per second
